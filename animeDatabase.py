@@ -33,7 +33,7 @@ def insertAnime(connection, title:str, capPath:str, epPath: str, numEp:int):
         print(f"Error: {e}")
 
 def fetchAnime(connection, animeName):
-    query = "SELECT * FROM anime WHERE title = ?"
+    query = "SELECT * FROM anime WHERE LOWER(title) = LOWER(?)"
     try:
         with connection:
             row = connection.execute(query, [animeName]).fetchone()
