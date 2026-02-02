@@ -1,23 +1,30 @@
 import os
 from sortingAnimeFn import sort_anime, unsort_anime
+from animeDatabase import getConnection, createTable
 
 def main():
-    while True:
-        print("Anime!")
-        print("1) Sort Anime")
-        print("2) Unsort Anime")
+    try:
+        connection = getConnection("anime.db")
+        createTable(connection)
 
-        choice = select_option()
+        while True:
+            print("Anime!")
+            print("1) Sort Anime")
+            print("2) Unsort Anime")
 
-        match choice:
-            case "Sort Anime":
-                os.system('cls')
-                sort_anime()
-            case "Unsort Anime":
-                os.system('cls')
-                unsort_anime()
-            case _:
-                return
+            choice = select_option()
+
+            match choice:
+                case "Sort Anime":
+                    os.system('cls')
+                    sort_anime(connection)
+                case "Unsort Anime":
+                    os.system('cls')
+                    unsort_anime(connection)
+                case _:
+                    return
+    finally:
+        connection.close()
     
             
 def select_option():

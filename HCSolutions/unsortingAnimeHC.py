@@ -8,7 +8,7 @@ num_ep = 70
 curr_ep = 1
 
 cap_path_txt = "C:\\Users\\megas\\OneDrive\\Desktop\\Cardcaptor Sakura (01-70)"
-ep_path_txt = "D:\\Apps\\Anime stuff\\Cardcaptor Sakura Episodes"
+ep_path_txt = "D:\\Apps\\Anime stuff\\Cardcaptor Sakura"
 
 captions_path = Path(cap_path_txt)
 episodes_path = Path(ep_path_txt)

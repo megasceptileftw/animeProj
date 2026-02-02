@@ -3,6 +3,8 @@ from pathlib import Path
 import shutil
 import re
 import glob
+from animeDatabase import insertAnime, fetchAnime, fetchAnime4Tbl, deleteAnime
+from table2ascii import table2ascii as t2a, PresetStyle
 
 def get_anime_name():
     anime_name_pattern = r"[a-zA-Z0-9 \-\.!:']+$"
@@ -20,7 +22,7 @@ def get_anime_name():
 
 
 def get_path(item):
-    path_pattern = r"^[a-zA-Z]:\\\\[\w \-\(\)]+(\\\\[\w \-\(\)]+)*$"
+    path_pattern = r"^[a-zA-Z]:\\\\[^<>:\"/|?*]+(\\\\[^<>:\"/|?*]+)*$"
     while True:
         path_txt = input(f"Path to {item} (remember to include double backslashes): ")
         if re.fullmatch(path_pattern, path_txt):
@@ -32,7 +34,7 @@ def get_path(item):
     return path_txt
 
 
-def sort_anime():
+def sort_anime(connection):
 
     anime_name = get_anime_name()
     directory_name = anime_name + " EP"
@@ -87,20 +89,28 @@ def sort_anime():
     os.system('cls')
     print("Your anime has been sorted!")
 
-def unsort_anime():
+    insertAnime(connection, anime_name, cap_path_txt, ep_path_txt, len(episodes))
 
-    cap_path_txt = get_path("captions")
+def unsort_anime(connection):
+
+    displayAnime(connection)
+
+    while True:
+        anime2unsort = input("Which anime would you like to unsort?: ")
+        animeTup = fetchAnime(connection, anime2unsort)
+        if animeTup != None:
+            break
+        print("Anime not found, try again")
+    
+    cap_path_txt = animeTup[1]
     captions_path = Path(cap_path_txt)
 
-    ep_path_txt = get_path("episodes")
+    ep_path_txt = animeTup[2]
     episodes_path = Path(ep_path_txt)
-    episodes = os.listdir(episodes_path)
 
-    directory_name = episodes[0][:-1]
-    print("Your directory names are " + directory_name)
+    directory_name = animeTup[0] + " EP"
 
-    num_ep = len(episodes)
-    print(f"Your anime has {num_ep} episodes")
+    num_ep = animeTup[3]
 
     decision = False
     while decision == False:
@@ -140,3 +150,21 @@ def unsort_anime():
     
     os.system('cls')
     print("Your anime has been unsorted!")
+    
+    deleteAnime(connection, animeTup[0])
+
+
+def displayAnime(connection):
+    currDB = fetchAnime4Tbl(connection)
+
+    chartBody = []
+
+    for entry in currDB:
+        chartBody.append([entry[0], entry[1]])
+    
+    output = t2a(
+        header=["Anime", "NumEPs"],
+        body=chartBody
+    )
+
+    print(output)
