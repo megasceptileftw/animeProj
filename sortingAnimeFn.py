@@ -6,6 +6,7 @@ import glob
 from animeDatabase import insertAnime, fetchAnime, fetchAnime4Tbl, deleteAnime
 from table2ascii import table2ascii as t2a, PresetStyle
 
+# function to get user input for the name of the anime 
 def get_anime_name():
     anime_name_pattern = r"[a-zA-Z0-9 \-\.!:']+$"
     while True:
@@ -20,7 +21,7 @@ def get_anime_name():
 
     return anime_name
 
-
+# getting path from user, requires them to have double backspaces, might be important to get just a normal path and change it for them, whatever
 def get_path(item):
     path_pattern = r"^[a-zA-Z]:\\\\[^<>:\"/|?*]+(\\\\[^<>:\"/|?*]+)*$"
     while True:
@@ -33,23 +34,28 @@ def get_path(item):
     
     return path_txt
 
-
+# function to sort anime, gets path location of episodes, gets path location of captions, creates a folder and puts them together
+# currently only supports an episode folder/caption folder that is just the episodes/captions that are already sorted
 def sort_anime(connection):
-
+    # get anime name from user and set up directory name to create
     anime_name = get_anime_name()
     directory_name = anime_name + " EP"
 
+    # get path to captions from user
     cap_path_txt = get_path("captions")
     captions_path = Path(cap_path_txt)
     captions = os.listdir(captions_path)
 
+    # get path to episodes from user
     ep_path_txt = get_path("episodes")
     episodes_path = Path(ep_path_txt)
     episodes = os.listdir(episodes_path)
 
+    # get number of episodes from the length of the list of episodes path
     num_ep = len(episodes)
     print(f"Your anime has {num_ep} episodes")
 
+    # confirming that the user wants to sort the anime
     decision = False
     while decision == False:
         print("Do you wish to proceed?")
@@ -61,14 +67,20 @@ def sort_anime(connection):
         else:
             print("Invalid Input, try again")
 
+    # variable to iterate through
     curr_ep = 1
 
+    # for each episode (and caption), create a folder in the episode path that holds both the episode file and caption file
+    # has naming scheme: 'anime title' + ' EP ' + 'episode number'
     while curr_ep < num_ep+1:
 
+        # set up the name for the directory to create
         curr_directory_name = directory_name + f"{curr_ep}"
 
+        # set up the path for the new directory
         full_path = os.path.join(episodes_path, curr_directory_name)
 
+        # create the directory with the path
         try:
             os.mkdir(full_path)
         except FileExistsError:
@@ -78,23 +90,31 @@ def sort_anime(connection):
         except Exception as e:
             print(f"An error occurred: {e}")
         
+        # get the path for the 'needed' caption and episode
         needed_cap_path = Path(cap_path_txt+"\\"+captions[curr_ep-1])
         needed_ep_path = Path(ep_path_txt+"\\"+episodes[curr_ep-1])
 
+        # move the 'needed' caption and episode file to the path
         shutil.move(needed_cap_path, full_path)
         shutil.move(needed_ep_path, full_path)
 
+        # iterate
         curr_ep = curr_ep + 1
     
     os.system('cls')
     print("Your anime has been sorted!")
 
+    # insert the anime into the database 
+    # currently set as (title of anime, path to location of captions originally, path to location of episodes, number of episodes)
     insertAnime(connection, anime_name, cap_path_txt, ep_path_txt, len(episodes))
 
+# function to unsort the anime and remove it from the database
 def unsort_anime(connection):
 
+    # display the anime that are currently in the database
     displayAnime(connection)
 
+    # ask the user which anime they would like to unsort
     while True:
         anime2unsort = input("Which anime would you like to unsort?: ")
         animeTup = fetchAnime(connection, anime2unsort)
@@ -102,6 +122,8 @@ def unsort_anime(connection):
             break
         print("Anime not found, try again")
     
+    # get the information we need, might want to confirm if the caption path still exists, if it doesn't ask them for a new path
+    # but idk it is fine for now
     cap_path_txt = animeTup[1]
     captions_path = Path(cap_path_txt)
 
@@ -112,6 +134,7 @@ def unsort_anime(connection):
 
     num_ep = animeTup[3]
 
+    # asking user if they want to proceed with unsorting the anime
     decision = False
     while decision == False:
         print("Do you wish to proceed?")
@@ -124,21 +147,27 @@ def unsort_anime(connection):
         else:
             print("Invalid Input, try again")
 
+    # variable to iterate through
     curr_ep = 1
 
+    # iterate through all the episodes, move the files back to their original position, then delete the folder that was created when sorting
     while curr_ep < num_ep+1:
-    
+        
+        # get the name and path of the current directory
         curr_directory_name = directory_name + f"{curr_ep}"
 
         curr_dir_path_txt = ep_path_txt + "\\" + curr_directory_name
         curr_dir_path = Path(curr_dir_path_txt)
 
+        # find the caption file, move it back to the original path
         for file in glob.glob(curr_dir_path_txt+"\\"+"*.srt"):
             shutil.move(file, captions_path)
-        
+
+        # find the video file, move it back to the original path
         for file in glob.glob(curr_dir_path_txt+"\\"+"*.mkv"):
             shutil.move(file, episodes_path)
         
+        # delete the directory that was created when sorting
         try:
             os.rmdir(curr_dir_path)
         except FileNotFoundError:
@@ -146,25 +175,31 @@ def unsort_anime(connection):
         except OSError as e:
             print(f"Error deleting folder {curr_dir_path}: {e}")
 
+        # iterate
         curr_ep = curr_ep + 1
     
     os.system('cls')
     print("Your anime has been unsorted!")
     
+    # delete the anime from the database
     deleteAnime(connection, animeTup[0])
 
-
+# display the anime in the database (with the title and number of episodes)
+# unsure how this will scale with a lot of data, but it is fine right now lmao
 def displayAnime(connection):
+    # fetch the data needed for the table
     currDB = fetchAnime4Tbl(connection)
 
+    # put the data into chartBody
     chartBody = []
-
     for entry in currDB:
         chartBody.append([entry[0], entry[1]])
     
+    # create the table 
     output = t2a(
         header=["Anime", "NumEPs"],
         body=chartBody
     )
 
+    # print the table
     print(output)
