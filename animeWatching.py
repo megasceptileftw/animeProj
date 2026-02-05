@@ -101,16 +101,19 @@ def watch_anime(connection):
         # iterating curr_ep
         curr_ep += 1
 
+    # setting up a counter for episodes watched with autoplay because I want user to be asked if they want to resume initially (even in autoplay)
+    autoCounter = 0
+
     # feeding each video and caption one at a time to play, so that the video doesn't autoplay when we don't want it to
     for vidFile, capFile in queue:
-
+        
         # setting the default start time of episodes to 0
         startTime = 0
         # getting the tuple for the episode status if it exists
         epTup = fetchEp(connection, vidFile)
 
-        # if the user is not using autoplay
-        if not autoplay:
+        # if the user is either not in autoplay or at the very beginning of autoplay
+        if autoCounter == 0:
             # if there is data on the episode
             if epTup != None:
                 # if the episode is not completed
@@ -180,3 +183,5 @@ def watch_anime(connection):
                     return
                 else:
                     print("Wrong input, try again")
+        else:
+            autoCounter += 1
