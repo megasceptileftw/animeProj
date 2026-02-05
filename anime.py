@@ -1,12 +1,13 @@
 import os
 from sortingAnimeFn import sort_anime, unsort_anime
-from animeDatabase import getConnection, createTable
+from animeDatabase import getConnection, createAnimeTable, createEpWatchedTable
 from animeWatching import watch_anime
 
 def main():
     try:
         connection = getConnection("anime.db")
-        createTable(connection)
+        createAnimeTable(connection)
+        createEpWatchedTable(connection)
 
         while True:
             print("Anime!")

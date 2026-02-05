@@ -9,7 +9,7 @@ def getConnection(dbName):
         raise
 
 # create the desired table
-def createTable(connection):
+def createAnimeTable(connection):
     query = """
     CREATE TABLE IF NOT EXISTS anime (
         title TEXT,
@@ -62,5 +62,61 @@ def deleteAnime(connection, animeName):
         with connection:
             connection.execute(query, [animeName])
         print(f"Anime: {animeName} was deleted from the database")
+    except Exception as e:
+        print(f"Error: {e}")
+
+###################################################################################################################
+####################### EpWatched table is for saving users progress on episodes ##################################
+###################################################################################################################
+
+# create the damn table
+def createEpWatchedTable(connection):
+    query = """
+    CREATE TABLE IF NOT EXISTS EpWatched (
+        vidFile TEXT,
+        timeWatched INTEGER,
+        completed INTEGER
+    )
+    """
+    try:
+        with connection:
+            connection.execute(query)
+    except Exception as e:
+        print(f"Error: {e}")
+
+# insert an episode into the table
+def insertEp(connection, vidFile:str, timeWatched:int, completed:int):
+    query = "INSERT INTO EpWatched (vidFile, timeWatched, completed) VALUES (?, ?, ?)"
+    try:
+        with connection:
+            connection.execute(query, (vidFile, timeWatched, completed))
+    except Exception as e:
+        print(f"Error: {e}")
+
+# fetch an episode with the video file
+def fetchEp(connection, vidFile:str):
+    query = "SELECT * FROM EpWatched WHERE vidFile = ?"
+    try:
+        with connection:
+            row = connection.execute(query, [vidFile]).fetchone()
+        return row
+    except Exception as e:
+        print(f"Error: {e}")
+
+# update the progress of an episode
+def updateEp(connection, vidFile:str, timeWatched:int, completed:int):
+    query = "UPDATE EpWatched SET (timeWatched, completed) = (?,?) WHERE vidFile = ?"
+    try: 
+        with connection:
+            connection.execute(query, (timeWatched, completed, vidFile))
+    except Exception as e:
+        print(f"Error: {e}")
+
+# delete an episode from the database, not yet used
+def deleteEp(connection, vidFile:str):
+    query = "DELETE FROM EpWatched WHERE vidFile = ?"
+    try:
+        with connection:
+            connection.execute(query, [vidFile])
     except Exception as e:
         print(f"Error: {e}")

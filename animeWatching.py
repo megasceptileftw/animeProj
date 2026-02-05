@@ -8,9 +8,11 @@ os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
 import mpv
 from pathlib import Path
 from sortingAnimeFn import displayAnime
-from animeDatabase import fetchAnime
+from animeDatabase import fetchAnime, insertEp, fetchEp, updateEp
 import glob
 import threading
+import msvcrt as m
+import time
 
 episode_ended = threading.Event()
 
@@ -102,17 +104,70 @@ def watch_anime(connection):
     # feeding each video and caption one at a time to play, so that the video doesn't autoplay when we don't want it to
     for vidFile, capFile in queue:
 
+        # setting the default start time of episodes to 0
+        startTime = 0
+        # getting the tuple for the episode status if it exists
+        epTup = fetchEp(connection, vidFile)
+
+        # if the user is not using autoplay
+        if not autoplay:
+            # if there is data on the episode
+            if epTup != None:
+                # if the episode is not completed
+                if epTup[1] < 1501:
+                    # ask the user if they want to resume the episode where it was previously ended and set the start time accordingly
+                    while True:
+                        question = input(f"The episode was previously ended at {round(epTup[1]/60, 2)} minutes, would you like to start there (type 'yes' or 'no')?: ").strip().lower()
+                        if question == "yes":
+                            startTime = epTup[1]
+                            break
+                        elif question == "no":
+                            startTime = 0
+                            break
+                        else:
+                            print("Wrong input, try again")
+
         # loading the first episode in the queue
-        player.loadfile(vidFile, sub_file=capFile)
+        player.loadfile(vidFile, sub_file=capFile, start=startTime)
 
         # when the next episode plays (autoplay not on), it is paused, so we make sure it plays
         player.pause = False
 
+        print("Press 'q' to quit the episode, press 'a' to toggle autoplay")
         # waiting for end of episode to be flagged
-        episode_ended.wait()
+        while not episode_ended.is_set():
+            # checking if the keyboard is hit
+            if m.kbhit():
+                key = m.getch()
+                # if the 'q' key is pressed, quit the episode and insert or update the status of the episode to the EpWatched table
+                if key == b'q':
+                    if epTup == None:
+                        insertEp(connection, vidFile, player.time_pos, 0) # insert the episode if it isn't already, set completed to 0 because the episode hasn't been completed yet
+                    else:
+                        updateEp(connection, vidFile, player.time_pos, epTup[2]) # update the episode if it is already in the table
+                    player.stop()
+                    return
+                # if the 'a' key is pressed, turn on/off autoplay
+                if key == b'a':
+                    if autoplay:
+                        autoplay = False
+                        print("autoplay is now off")
+                    else:
+                        autoplay = True
+                        print("autoplay is now on")
+
+            # let the cpu not cook
+            time.sleep(0.1)
+            
 
         # clearing the flag so we can use it again later
         episode_ended.clear()
+
+        # update the status of an episode at the end also
+        if epTup == None:
+            insertEp(connection, vidFile, player.time_pos, 1) # insert the episode if it isn't already, set completed to 1 bc ep is now completed
+        else:
+            updateEp(connection, vidFile, player.time_pos, epTup[2]+1) # update the episode if it is already in the table, iterate completed bc ep is now completed
 
         # if the autoplay is not on, we let the user choose if they want to watch next ep
         if not autoplay:
@@ -121,7 +176,7 @@ def watch_anime(connection):
                 if cont == "yes":
                     break
                 elif cont == "no":
-                    player.quit()
+                    player.stop()
                     return
                 else:
                     print("Wrong input, try again")
