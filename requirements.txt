@@ -1,0 +1,3 @@
+pysubs2==1.8.0
+python-mpv==1.0.8
+table2ascii==1.2.0
